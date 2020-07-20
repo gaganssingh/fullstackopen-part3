@@ -28,12 +28,62 @@ let persons = [
 // body-parser
 app.use(express.json());
 
+// General route
 app.get("/", (req, res) => {
    res.send("Hello world");
 });
 
+// Persons route
 app.get("/api/persons", (req, res) => {
    res.json(persons);
+});
+
+app.get("/api/persons/:id", (req, res) => {
+   const requestedId = Number(req.params.id);
+   const person = persons.find((p) => p.id === requestedId);
+   if (person) {
+      res.json(person);
+   } else {
+      res.status(404).end();
+   }
+});
+
+app.post("/api/persons", (req, res) => {
+   const { name, number } = req.body;
+
+   const checkNameExists = persons.find((p) => p.name === name);
+
+   if (!name || !number)
+      res.status(400).json({ error: "Please provide name and number" });
+
+   if (checkNameExists)
+      return res
+         .status(400)
+         .json({ error: `Contact with name "${name}" already exists` });
+
+   const newPerson = {
+      name,
+      number,
+      id: Math.random() * 10000000,
+   };
+
+   persons = persons.concat(newPerson);
+
+   res.json(newPerson);
+});
+
+app.delete("/api/persons/:id", (req, res) => {
+   const requestedId = Number(req.params.id);
+   persons = persons.filter((person) => person.id !== requestedId);
+   res.status(204).end();
+});
+
+// Phonebook info route
+app.get("/info", (req, res) => {
+   const requestReceivedAt = new Date();
+   res.send(
+      `<p>Phonebook has info for ${persons.length} people</p><p>${requestReceivedAt}</p>`
+   );
 });
 
 const PORT = 3001;
