@@ -1,6 +1,5 @@
 const express = require("express");
-
-const app = express();
+const morgan = require("morgan");
 
 let persons = [
    {
@@ -25,8 +24,19 @@ let persons = [
    },
 ];
 
+// Initialize app
+const app = express();
+
 // body-parser
 app.use(express.json());
+
+// Morgan logging middleware
+app.use(morgan("tiny"));
+
+morgan.token("body", (req, res) => JSON.stringify(req.body));
+app.use(
+   morgan(":method :url :status :res[content-length] - :response-time ms :body")
+);
 
 // General route
 app.get("/", (req, res) => {
