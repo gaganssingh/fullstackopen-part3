@@ -42,6 +42,9 @@ app.use(
 // Enable cors
 app.use(cors());
 
+// Serve static frontend
+app.use(express.static("build"));
+
 // General route
 app.get("/", (req, res) => {
    res.send("Hello world");
