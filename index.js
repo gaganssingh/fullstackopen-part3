@@ -3,52 +3,37 @@ const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
 
-// MongoDB models
-const Person = require("./models/person");
+const Person = require("./models/person"); // Imported MongoDB models
 
-// Initialize app
-const app = express();
+const app = express(); // Initialize app
 
-// body-parser
-app.use(express.json());
-
-// Morgan logging middleware
-app.use(morgan("tiny"));
-
-morgan.token("body", (req, res) => JSON.stringify(req.body));
+// MIDDLEWARES
+app.use(express.json()); // body-parser
+app.use(morgan("tiny")); // Morgan logging middleware
+morgan.token("body", (req, res) => JSON.stringify(req.body)); // Custom Morgan Logger
 app.use(
    morgan(":method :url :status :res[content-length] - :response-time ms :body")
 );
 
-// Enable cors
-app.use(cors());
+app.use(cors()); // Enable cors
+app.use(express.static("build")); // Serve static frontend
 
-// Serve static frontend
-app.use(express.static("build"));
-
+// ROUTES
 // Get all persons from db
 app.get("/api/persons", (req, res) => {
    Person.find({}).then((persons) => res.json(persons));
 });
 
-// get person by id
+// Get person by id
 app.get("/api/persons/:id", (req, res) => {
    Person.findById(req.params.id).then((person) => res.json(person));
 });
 
-// Create person and save to db
+// Create new person
 app.post("/api/persons", (req, res) => {
    const body = req.body;
-
-   // const checkNameExists = persons.find((p) => p.name === name);
-
    if (!body.name || !body.number)
       res.status(400).json({ error: "Please provide name and number" });
-
-   // if (checkNameExists)
-   //    return res
-   //       .status(400)
-   //       .json({ error: `Contact with name "${name}" already exists` });
 
    const person = new Person({
       name: body.name,
@@ -58,18 +43,47 @@ app.post("/api/persons", (req, res) => {
    person.save().then((savedPerson) => res.json(savedPerson));
 });
 
-app.delete("/api/persons/:id", (req, res) => {
-   const requestedId = Number(req.params.id);
-   persons = persons.filter((person) => person.id !== requestedId);
-   res.status(204).end();
+// Delete person by id route
+app.delete("/api/persons/:id", (req, res, next) => {
+   Person.findByIdAndRemove(req.params.id)
+      .then((result) => res.status(204).end)
+      .catch((error) => next(error));
+});
+
+// Update person by name
+app.put("/api/persons/:id", (req, res, next) => {
+   const body = req.body;
+
+   const person = {
+      name: body.name,
+      number: body.number,
+   };
+
+   Person.findByIdAndUpdate(req.params.id, person, { new: true })
+      .then((updatedPerson) => res.json(updatedPerson))
+      .catch((error) => next(error));
 });
 
 // Phonebook info route
-app.get("/info", (req, res) => {
+app.get("/info", (req, res, next) => {
    const requestReceivedAt = new Date();
-   res.send(
-      `<p>Phonebook has info for ${persons.length} people</p><p>${requestReceivedAt}</p>`
-   );
+   Person.find({})
+      .then((persons) =>
+         res.send(
+            `<p>Phonebook has info for ${persons.length} people</p><p>${requestReceivedAt}</p>`
+         )
+      )
+      .catch((error) => next(error));
+});
+
+// Error handler Middleware
+app.use((error, request, response, next) => {
+   console.error(error.message);
+
+   if (error.name === "CastError") {
+      return response.status(400).send({ error: "malformatted id" });
+   }
+   next(error);
 });
 
 const PORT = process.env.PORT || 3001;
