@@ -30,7 +30,7 @@ app.get("/api/persons/:id", (req, res) => {
 });
 
 // Create new person
-app.post("/api/persons", (req, res) => {
+app.post("/api/persons", (req, res, next) => {
    const body = req.body;
    if (!body.name || !body.number)
       res.status(400).json({ error: "Please provide name and number" });
@@ -40,7 +40,10 @@ app.post("/api/persons", (req, res) => {
       number: body.number,
    });
 
-   person.save().then((savedPerson) => res.json(savedPerson));
+   person
+      .save()
+      .then((savedPerson) => res.json(savedPerson))
+      .catch((error) => next(error));
 });
 
 // Delete person by id route
@@ -82,6 +85,8 @@ app.use((error, request, response, next) => {
 
    if (error.name === "CastError") {
       return response.status(400).send({ error: "malformatted id" });
+   } else if (error.name === "ValidationError") {
+      return response.status(400).json({ error: error.message });
    }
    next(error);
 });
