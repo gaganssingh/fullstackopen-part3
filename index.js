@@ -1,29 +1,10 @@
+require("dotenv").config();
 const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
 
-let persons = [
-   {
-      name: "Arto Hellas",
-      number: "040-123456",
-      id: 1,
-   },
-   {
-      name: "Ada Lovelace",
-      number: "39-44-5323523",
-      id: 2,
-   },
-   {
-      name: "Dan Abramov",
-      number: "12-43-234345",
-      id: 3,
-   },
-   {
-      name: "Mary Poppendieck",
-      number: "39-23-6423122",
-      id: 4,
-   },
-];
+// MongoDB models
+const Person = require("./models/person");
 
 // Initialize app
 const app = express();
@@ -45,48 +26,36 @@ app.use(cors());
 // Serve static frontend
 app.use(express.static("build"));
 
-// General route
-app.get("/", (req, res) => {
-   res.send("Hello world");
-});
-
-// Persons route
+// Get all persons from db
 app.get("/api/persons", (req, res) => {
-   res.json(persons);
+   Person.find({}).then((persons) => res.json(persons));
 });
 
+// get person by id
 app.get("/api/persons/:id", (req, res) => {
-   const requestedId = Number(req.params.id);
-   const person = persons.find((p) => p.id === requestedId);
-   if (person) {
-      res.json(person);
-   } else {
-      res.status(404).end();
-   }
+   Person.findById(req.params.id).then((person) => res.json(person));
 });
 
+// Create person and save to db
 app.post("/api/persons", (req, res) => {
-   const { name, number } = req.body;
+   const body = req.body;
 
-   const checkNameExists = persons.find((p) => p.name === name);
+   // const checkNameExists = persons.find((p) => p.name === name);
 
-   if (!name || !number)
+   if (!body.name || !body.number)
       res.status(400).json({ error: "Please provide name and number" });
 
-   if (checkNameExists)
-      return res
-         .status(400)
-         .json({ error: `Contact with name "${name}" already exists` });
+   // if (checkNameExists)
+   //    return res
+   //       .status(400)
+   //       .json({ error: `Contact with name "${name}" already exists` });
 
-   const newPerson = {
-      name,
-      number,
-      id: Math.random() * 10000000,
-   };
+   const person = new Person({
+      name: body.name,
+      number: body.number,
+   });
 
-   persons = persons.concat(newPerson);
-
-   res.json(newPerson);
+   person.save().then((savedPerson) => res.json(savedPerson));
 });
 
 app.delete("/api/persons/:id", (req, res) => {
